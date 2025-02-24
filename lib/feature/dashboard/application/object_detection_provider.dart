@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:tflite_v2/tflite_v2.dart';
 
 class ObjectDetectionProvider with ChangeNotifier {
@@ -72,6 +73,28 @@ class ObjectDetectionProvider with ChangeNotifier {
     isProcessing = true;
 
     try {
+      int sensorOrientation = cameraController!.description.sensorOrientation;
+      int deviceOrientation;
+      switch (cameraController!.value.deviceOrientation) {
+        case DeviceOrientation.portraitUp:
+          deviceOrientation = 0;
+          break;
+        case DeviceOrientation.landscapeLeft:
+          deviceOrientation = 90;
+          break;
+        case DeviceOrientation.landscapeRight:
+          deviceOrientation = 270;
+          break;
+        case DeviceOrientation.portraitDown:
+          deviceOrientation = 180;
+          break;
+        default:
+          deviceOrientation = 0;
+          break;
+      }
+
+      int rotation = (sensorOrientation - deviceOrientation + 360) % 360;
+
       final objects = await Tflite.detectObjectOnFrame(
         bytesList: image.planes.map((plane) => plane.bytes).toList(),
         model: 'SSDMobileNet',
@@ -81,6 +104,7 @@ class ObjectDetectionProvider with ChangeNotifier {
         imageStd: 127.5,
         threshold: 0.65,
         numResultsPerClass: 1,
+        rotation: rotation, // Add rotation parameter here
       );
 
       final filtered = _filterDetections(objects);
