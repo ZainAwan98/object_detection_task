@@ -2,22 +2,36 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:object_detection/feature/dashboard/application/object_detection_provider.dart';
 import 'package:object_detection/helper/routes_helper.dart';
 import 'package:object_detection/routes/routes_names.dart';
 
-class MetadataScreen extends StatelessWidget {
+class MetadataScreen extends StatefulWidget {
   final String imagePath;
   final String detectedClass;
   final String metadata;
   final String fileType;
+  ObjectDetectionProvider provider;
 
-  const MetadataScreen({
+  MetadataScreen({
     super.key,
     required this.imagePath,
     required this.detectedClass,
     required this.metadata,
     required this.fileType,
+    required this.provider,
   });
+
+  @override
+  State<MetadataScreen> createState() => _MetadataScreenState();
+}
+
+class _MetadataScreenState extends State<MetadataScreen> {
+  @override
+  void initState() {
+    widget.provider.stopCamera();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +91,7 @@ class MetadataScreen extends StatelessWidget {
         SizedBox(
           height: 0.6.sh,
           child: Image.file(
-            File(imagePath),
+            File(widget.imagePath),
             fit: BoxFit.contain,
           ),
         ),
@@ -97,7 +111,7 @@ class MetadataScreen extends StatelessWidget {
             height: 0.7.sh,
             padding: EdgeInsets.only(right: 10.w),
             child: Image.file(
-              File(imagePath),
+              File(widget.imagePath),
               fit: BoxFit.contain,
             ),
           ),
@@ -114,9 +128,9 @@ class MetadataScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoItem("File Type:", fileType),
-        _buildInfoItem("Detected Item:", detectedClass),
-        _buildInfoItem("Time and Date:", metadata),
+        _buildInfoItem("File Type:", widget.fileType),
+        _buildInfoItem("Detected Item:", widget.detectedClass),
+        _buildInfoItem("Time and Date:", widget.metadata),
       ],
     );
   }

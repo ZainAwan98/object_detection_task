@@ -27,6 +27,7 @@ class RouteGenerator {
             fileType: args['fileType'],
             detectedClass: args['detectedClass'],
             metadata: args['metadata'],
+            provider: args['provider'],
           ),
         );
 

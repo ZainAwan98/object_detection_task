@@ -31,7 +31,9 @@ class OnboardingScreen extends StatelessWidget {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select an item")),
+        const SnackBar(
+          content: Text("Please select an item"),
+        ),
       );
     }
   }

@@ -31,7 +31,9 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
       cameras: widget.cameras,
       selectedItemName: widget.selectedItemName,
     );
+
     _provider.loadModel().then((_) => _provider.initializeCamera());
+
     _provider.onNavigate = _navigateToMetadataScreen;
   }
 
@@ -44,6 +46,7 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
   void _navigateToMetadataScreen(String detectedClass, String imagePath) async {
     final bytes = await File(imagePath).readAsBytes();
     String fileType = _provider.getFileType(bytes);
+
     RouteHelper.navigateTo(
       context,
       RouteNames.imageMetaDetaView,
@@ -51,10 +54,10 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
         'imagePath': imagePath,
         'fileType': fileType,
         'detectedClass': detectedClass,
-        'metadata': "Detected at ${DateTime.now()}"
+        'metadata': "Detected at ${DateTime.now()}",
+        'provider': _provider,
       },
     );
-    await _provider.stopCamera();
   }
 
   @override
@@ -65,9 +68,10 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
         builder: (context, provider, child) {
           final isPortrait =
               MediaQuery.of(context).orientation == Orientation.portrait;
-
-          if (!provider.cameraController.value.isInitialized) {
-            return const Center(child: CircularProgressIndicator());
+          if (provider.cameraController != null) {
+            if (!provider.cameraController!.value.isInitialized) {
+              return const Center(child: CircularProgressIndicator());
+            }
           }
 
           return Scaffold(
@@ -84,15 +88,19 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
                             Transform.rotate(
                               angle: provider.orientation * 3.1415927 / 180,
                               child: AspectRatio(
-                                aspectRatio:
-                                    provider.cameraController.value.aspectRatio,
+                                aspectRatio: provider.cameraController != null
+                                    ? provider
+                                        .cameraController!.value.aspectRatio
+                                    : 16 / 9,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                         color: Colors.blue, width: 4),
                                   ),
-                                  child:
-                                      CameraPreview(provider.cameraController),
+                                  child: provider.cameraController != null
+                                      ? CameraPreview(
+                                          provider.cameraController!)
+                                      : null,
                                 ),
                               ),
                             ),
@@ -120,21 +128,28 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
                               children: [
                                 Center(
                                   child: SizedBox(
-                                    height: 0.5.sh,
+                                    height: 0.3.sw,
                                     child: Transform.rotate(
                                       angle: provider.orientation *
                                           3.1415927 /
                                           180,
                                       child: AspectRatio(
-                                        aspectRatio: provider
-                                            .cameraController.value.aspectRatio,
+                                        aspectRatio:
+                                            provider.cameraController != null
+                                                ? provider.cameraController!
+                                                        .value.aspectRatio /
+                                                    2
+                                                : 16 / 9,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             border: Border.all(
                                                 color: Colors.blue, width: 4),
                                           ),
-                                          child: CameraPreview(
-                                              provider.cameraController),
+                                          child: provider.cameraController !=
+                                                  null
+                                              ? CameraPreview(
+                                                  provider.cameraController!)
+                                              : null,
                                         ),
                                       ),
                                     ),

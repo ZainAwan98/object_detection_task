@@ -7,7 +7,8 @@ import 'package:tflite_v2/tflite_v2.dart';
 class ObjectDetectionProvider with ChangeNotifier {
   final List<CameraDescription> cameras;
   final String selectedItemName;
-  late CameraController cameraController;
+
+  CameraController? cameraController;
   bool isModelLoaded = false;
   List<dynamic>? detectedObjects;
   String guidanceMessage = "Align the object within the camera view";
@@ -31,40 +32,69 @@ class ObjectDetectionProvider with ChangeNotifier {
   }
 
   Future<void> initializeCamera() async {
-    cameraController = CameraController(
-      cameras[0],
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
+    if (cameras.isEmpty) {
+      debugPrint("No cameras found");
+      return;
+    }
 
-    await cameraController.initialize();
-    orientation = cameraController.description.sensorOrientation;
+    try {
+      cameraController = CameraController(
+        cameras[0],
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
 
-    cameraController.startImageStream((image) {
-      if (isModelLoaded && !isCapturing) processImage(image);
-    });
-    notifyListeners();
+      await cameraController!.initialize();
+      orientation = cameraController!.description.sensorOrientation;
+
+      if (!cameraController!.value.isStreamingImages) {
+        cameraController!.startImageStream((image) {
+          if (isModelLoaded && !isCapturing) processImage(image);
+        });
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error initializing camera: $e");
+    }
   }
 
+  bool isProcessing = false;
+
   Future<void> processImage(CameraImage image) async {
-    final objects = await Tflite.detectObjectOnFrame(
-      bytesList: image.planes.map((plane) => plane.bytes).toList(),
-      model: 'SSDMobileNet',
-      imageHeight: image.height,
-      imageWidth: image.width,
-      imageMean: 127.5,
-      imageStd: 127.5,
-      threshold: 0.65,
-      numResultsPerClass: 1,
-    );
+    if (!isModelLoaded ||
+        cameraController == null ||
+        !cameraController!.value.isInitialized ||
+        isProcessing) {
+      return;
+    }
 
-    final filtered = _filterDetections(objects);
+    isProcessing = true;
 
-    detectedObjects = filtered;
-    guidanceMessage = _getUserGuidance(filtered);
-    notifyListeners();
+    try {
+      final objects = await Tflite.detectObjectOnFrame(
+        bytesList: image.planes.map((plane) => plane.bytes).toList(),
+        model: 'SSDMobileNet',
+        imageHeight: image.height,
+        imageWidth: image.width,
+        imageMean: 127.5,
+        imageStd: 127.5,
+        threshold: 0.65,
+        numResultsPerClass: 1,
+      );
 
-    if (filtered?.isNotEmpty ?? false) _handleGoodPosition(filtered!.first);
+      final filtered = _filterDetections(objects);
+
+      detectedObjects = filtered;
+      guidanceMessage = _getUserGuidance(filtered);
+      notifyListeners();
+
+      if (filtered?.isNotEmpty ?? false) _handleGoodPosition(filtered!.first);
+    } catch (e) {
+      debugPrint("Error processing image: $e");
+    } finally {
+      isProcessing = false;
+    }
   }
 
   List<dynamic>? _filterDetections(List<dynamic>? detections) {
@@ -84,7 +114,7 @@ class ObjectDetectionProvider with ChangeNotifier {
         1) {
       isCapturing = true;
       lastGoodPositionTime = null;
-      final imageFile = await cameraController.takePicture();
+      final imageFile = await cameraController!.takePicture();
       onNavigate?.call(detectedClass, imageFile.path);
     }
   }
@@ -152,17 +182,17 @@ class ObjectDetectionProvider with ChangeNotifier {
   }
 
   Future<void> stopCamera() async {
-    if (cameraController.value.isStreamingImages) {
-      await cameraController.stopImageStream();
+    if (cameraController != null && cameraController!.value.isInitialized) {
+      if (cameraController!.value.isStreamingImages) {
+        await cameraController!.stopImageStream();
+      }
+      await cameraController!.dispose();
     }
-    await cameraController.dispose();
   }
 
   @override
   void dispose() {
-    if (cameraController.value.isInitialized) {
-      cameraController.dispose();
-    }
+    stopCamera();
     super.dispose();
   }
 }
