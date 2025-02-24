@@ -104,7 +104,7 @@ class ObjectDetectionProvider with ChangeNotifier {
         imageStd: 127.5,
         threshold: 0.65,
         numResultsPerClass: 1,
-        rotation: rotation, // Add rotation parameter here
+        rotation: rotation,
       );
 
       final filtered = _filterDetections(objects);
